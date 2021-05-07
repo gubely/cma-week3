@@ -40,10 +40,10 @@ caro <- caro %>%                           # Take caro (grouping not needed)
   mutate(speed = steplength/timelag) %>% 
   # Step b: Measure the distance from every point to every other point within this temporal window
   mutate( 
-    nMinus2 = sqrt((lag(E,2)-E)^2+(lag(N,2)-N)^2),   # distance to pos -30 minutes
-    nMinus1 = sqrt((lag(E,1)-E)^2+(lag(N,1)-N)^2),   # distance to pos -15 minutes
-    nPlus1  = sqrt((E-lead(E,1))^2+(N-lead(N,1))^2), # distance to pos +15 mintues
-    nPlus2  = sqrt((E-lead(E,2))^2+(N-lead(N,2))^2)  # distance to pos +30 minutes
+    nMinus2 = sqrt((lag(E,30)-E)^2+(lag(N,30)-N)^2),   # distance to pos -30 minutes
+    nMinus1 = sqrt((lag(E,15)-E)^2+(lag(N,15)-N)^2),   # distance to pos -15 minutes
+    nPlus1  = sqrt((E-lead(E,15))^2+(N-lead(N,15))^2), # distance to pos +15 mintues
+    nPlus2  = sqrt((E-lead(E,30))^2+(N-lead(N,30))^2)  # distance to pos +30 minutes
   ) %>% 
   rowwise() %>%
   mutate(
@@ -78,20 +78,27 @@ caro_filter %>%
   ggplot(data=caro, mapping=aes(E, N, colour = segment_id))  +
   geom_path() +
   geom_point() +
-  coord_fixed() +
+  coord_equal() +
   labs(title = "Moving segements coloured by segment ID") + 
-  theme_classic()
+  theme_classic() +
+  theme(legend.position = "none")
 
 # filter on duration
 
-caro_5 <- caro %>% 
-  slice(seq(1, nrow(caro), by = 5)) %>% 
-  mutate(timelag = as.integer(difftime(lead(DatetimeUTC),DatetimeUTC, units = "secs"))) %>% 
-  mutate(steplength = sqrt(((E-lead(E,1))^2+(N-lead(N,1))^2))) %>% 
-  mutate(speed = steplength/timelag)
+caro_5 <- caro %>%
+  group_by(segment_id) %>% 
+  slice(seq(1, nrow(caro), by = 5)) 
 
-# caro_5min <- caro %>% 
-#   group_by(segment_id)
+# generate a plot with sliced data
+caro_5 %>%
+  ggplot(data=caro_5, mapping=aes(E, N, colour = segment_id))  +
+  geom_path() +
+  geom_point() +
+  coord_fixed() +
+  labs(title = "Moving segements coloured by segment ID") + 
+  theme_classic() +
+  theme(legend.position = "none")
+
 ```
 
 ```{r task 5, highlight=TRUE, message = FALSE}
@@ -112,24 +119,71 @@ ped %>%
 
 ```{r task_6, highlight=TRUE, message = FALSE}
 
+ped1 <- ped %>% 
+  filter(trajectories == 1) %>% 
+  dplyr::select(E,N)
+ped2 <- ped %>%
+  filter(trajectories == 2) %>% 
+  dplyr::select(E,N) 
+ped3 <- ped %>%
+  filter(trajectories == 3) %>% 
+  dplyr::select(E,N) 
+ped4 <- ped %>%
+  filter(trajectories == 4) %>% 
+  dplyr::select(E,N) 
+ped5 <- ped %>%
+  filter(trajectories == 5) %>% 
+  dplyr::select(E,N) 
+ped6 <- ped %>%
+  filter(trajectories == 6) %>% 
+  dplyr::select(E,N) 
+
+ped1m <- matrix(data = c(as.numeric(ped1$E),as.numeric(ped1$N)), ncol = 2)
+ped2m <- matrix(data = c(as.numeric(ped2$E),as.numeric(ped2$N)), ncol = 2)
+ped3m <- matrix(data = c(as.numeric(ped3$E),as.numeric(ped3$N)), ncol = 2)
+ped4m <- matrix(data = c(as.numeric(ped4$E),as.numeric(ped4$N)), ncol = 2)
+ped5m <- matrix(data = c(as.numeric(ped5$E),as.numeric(ped5$N)), ncol = 2)
+ped6m <- matrix(data = c(as.numeric(ped6$E),as.numeric(ped6$N)), ncol = 2)
+
+ed2 <- EditDist(ped1m,ped2m)
+ed3 <- EditDist(ped1m,ped3m)
+ed4 <- EditDist(ped1m,ped4m)
+ed5 <- EditDist(ped1m,ped5m)
+ed6 <- EditDist(ped1m,ped6m)
+
+dtw2 <- DTW(ped1m,ped2m)
+dtw3 <- DTW(ped1m,ped3m)
+dtw4 <- DTW(ped1m,ped4m)
+dtw5 <- DTW(ped1m,ped5m)
+dtw6 <- DTW(ped1m,ped6m)
+
+ped <- ped %>% 
+  mutate(
+    dtw = case_when(
+      trajectories == "2"~dtw2,
+      trajectories == "3"~dtw3,
+      trajectories == "4"~dtw4,
+      trajectories == "5"~dtw5,
+      trajectories == "6"~dtw6,
+      TRUE~0 #Default case
+    )
+  ) %>% 
+  mutate(
+  ed = case_when(
+    trajectories == "2"~ed2,
+    trajectories == "3"~ed3,
+    trajectories == "4"~ed4,
+    trajectories == "5"~ed5,
+    trajectories == "6"~ed6,
+    TRUE~0 #Default case
+    )
+  )
+
+f <- ggplot(mpg, aes(class, hwy))
+
+
+
+
 ```
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
