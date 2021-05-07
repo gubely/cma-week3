@@ -88,13 +88,13 @@ caro_filter %>%
 # filter on duration
 caro_5 <- caro %>%
   group_by(segment_id) %>% 
-  slice(seq(1, nrow(caro), by = 5)) 
+  mutate(n = n()) 
 
 # generate a plot with sliced data
 caro_5 %>%
-  ggplot(data=caro_5, mapping=aes(E, N, colour = segment_id))  +
-  # removed the following line because it plots only some lines. looks ugly
-  # geom_path() +
+  filter(!static & n >5) %>% 
+  ggplot(aes(E, N)) +
+  geom_path() +
   geom_point() +
   coord_fixed() +
   labs(title = "Moving segements coloured by segment ID (sliced)") + 
