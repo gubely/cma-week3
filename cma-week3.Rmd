@@ -16,6 +16,8 @@ library(terra)        # To handle raster data
 library(lubridate)    # To handle dates and times
 library(zoo)          # To smoothen data
 library(cowplot)
+library(SimilarityMeasures)
+
 
 # define functions
 rle_id <- function(vec){
@@ -81,6 +83,13 @@ caro_filter %>%
   theme_classic()
 
 # filter on duration
+
+caro_5 <- caro %>% 
+  slice(seq(1, nrow(caro), by = 5)) %>% 
+  mutate(timelag = as.integer(difftime(lead(DatetimeUTC),DatetimeUTC, units = "secs"))) %>% 
+  mutate(steplength = sqrt(((E-lead(E,1))^2+(N-lead(N,1))^2))) %>% 
+  mutate(speed = steplength/timelag)
+
 # caro_5min <- caro %>% 
 #   group_by(segment_id)
 ```
@@ -89,6 +98,20 @@ caro_filter %>%
 # Task 5
 ped <- read_delim("00_Rawdata/pedestrian.csv",",") # adjust path
 ped <- st_as_sf(ped, coords = c("E", "N"), crs = 2056, remove = FALSE)
+ped <- ped %>% mutate(trajectories = as.factor(ped$TrajID)) 
+
+ped %>%
+  ggplot(data=ped, mapping=aes(E, N, colour = trajectories))  +
+  geom_path() +
+  geom_point() +
+  coord_fixed() +
+  facet_wrap(~trajectories) +
+  labs(title = "Visual Comparision of the 6 trajectories", subtitle = "Each subplot is shown i a different graph") + 
+  theme_classic()
+```
+
+```{r task_6, highlight=TRUE, message = FALSE}
+
 ```
 
 ## R Markdown
