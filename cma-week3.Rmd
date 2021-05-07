@@ -51,8 +51,8 @@ caro <- caro %>%
 caro_filter <- caro %>%
   filter(!static)
 
-caro_filter%>%
-  ggplot(aes(E, N))  +
+caro_filter %>%
+  ggplot(data=caro, mapping=aes(E, N, colour = static))  +
   geom_path() +
   geom_point() +
   coord_fixed() +
