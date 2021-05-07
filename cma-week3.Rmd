@@ -8,6 +8,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
+library(tidyverse)
 library(readr)        # to import tabular data (e.g. csv)
 library(dplyr)        # to manipulate (tabular) data
 library(ggplot2)      # to visualize data
@@ -17,7 +18,6 @@ library(lubridate)    # To handle dates and times
 library(zoo)          # To smoothen data
 library(cowplot)
 library(SimilarityMeasures)
-
 
 # define functions
 rle_id <- function(vec){
@@ -50,7 +50,7 @@ caro <- caro %>%                           # Take caro (grouping not needed)
     stepMean = mean(c(nMinus2, nMinus1,nPlus1,nPlus2))
   ) %>%
   ungroup() 
-
+# Task 2
 # Step c: Remove static points
 caro <- caro %>% 
   ungroup() %>%
@@ -64,7 +64,8 @@ caro_filter %>%
   geom_path() +
   geom_point() +
   coord_fixed() +
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom") +
+  theme_classic()
 ```
 
 
@@ -76,15 +77,15 @@ caro <- caro %>%
 # generate a plot with uncleanded data
 caro_filter %>%
   ggplot(data=caro, mapping=aes(E, N, colour = segment_id))  +
-  geom_path() +
+  # removed the following line because it plots only some lines. looks ugly
+  # geom_path() +
   geom_point() +
   coord_equal() +
-  labs(title = "Moving segements coloured by segment ID") + 
+  labs(title = "Moving segements coloured by segment ID (uncleaned)") + 
   theme_classic() +
   theme(legend.position = "none")
 
 # filter on duration
-
 caro_5 <- caro %>%
   group_by(segment_id) %>% 
   slice(seq(1, nrow(caro), by = 5)) 
@@ -92,17 +93,17 @@ caro_5 <- caro %>%
 # generate a plot with sliced data
 caro_5 %>%
   ggplot(data=caro_5, mapping=aes(E, N, colour = segment_id))  +
-  geom_path() +
+  # removed the following line because it plots only some lines. looks ugly
+  # geom_path() +
   geom_point() +
   coord_fixed() +
-  labs(title = "Moving segements coloured by segment ID") + 
+  labs(title = "Moving segements coloured by segment ID (sliced)") + 
   theme_classic() +
   theme(legend.position = "none")
-
 ```
 
 ```{r task 5, highlight=TRUE, message = FALSE}
-# Task 5
+# Task 5: Similarity measures
 ped <- read_delim("00_Rawdata/pedestrian.csv",",") # adjust path
 ped <- st_as_sf(ped, coords = c("E", "N"), crs = 2056, remove = FALSE)
 ped <- ped %>% mutate(trajectories = as.factor(ped$TrajID)) 
@@ -118,7 +119,8 @@ ped %>%
 ```
 
 ```{r task_6, highlight=TRUE, message = FALSE}
-
+# Task 6: Calculate similarity
+# filter by trajectory
 ped1 <- ped %>% 
   filter(trajectories == 1) %>% 
   dplyr::select(E,N)
@@ -137,26 +139,26 @@ ped5 <- ped %>%
 ped6 <- ped %>%
   filter(trajectories == 6) %>% 
   dplyr::select(E,N) 
-
+# convert into matrix
 ped1m <- matrix(data = c(as.numeric(ped1$E),as.numeric(ped1$N)), ncol = 2)
 ped2m <- matrix(data = c(as.numeric(ped2$E),as.numeric(ped2$N)), ncol = 2)
 ped3m <- matrix(data = c(as.numeric(ped3$E),as.numeric(ped3$N)), ncol = 2)
 ped4m <- matrix(data = c(as.numeric(ped4$E),as.numeric(ped4$N)), ncol = 2)
 ped5m <- matrix(data = c(as.numeric(ped5$E),as.numeric(ped5$N)), ncol = 2)
 ped6m <- matrix(data = c(as.numeric(ped6$E),as.numeric(ped6$N)), ncol = 2)
-
+# compute similarity measure: EditDist
 ed2 <- EditDist(ped1m,ped2m)
 ed3 <- EditDist(ped1m,ped3m)
 ed4 <- EditDist(ped1m,ped4m)
 ed5 <- EditDist(ped1m,ped5m)
 ed6 <- EditDist(ped1m,ped6m)
-
+# compute similarity measure: DTW
 dtw2 <- DTW(ped1m,ped2m)
 dtw3 <- DTW(ped1m,ped3m)
 dtw4 <- DTW(ped1m,ped4m)
 dtw5 <- DTW(ped1m,ped5m)
 dtw6 <- DTW(ped1m,ped6m)
-
+# Add computed results to ped
 ped <- ped %>% 
   mutate(
     dtw = case_when(
@@ -178,12 +180,26 @@ ped <- ped %>%
     TRUE~0 #Default case
     )
   )
+# plot dtw analysis
+p_dtw <- ggplot(ped, aes(x = trajectories, y = dtw, fill = trajectories)) +
+  geom_col() +
+  # For some reason it plots the sum of the computed similarity measures
+  scale_y_continuous(limits = c(0, 600000)) +
+  theme_classic() +
+  labs(title = "computed similarity: DTW") +
+  theme(legend.position = "none")
 
-f <- ggplot(mpg, aes(class, hwy))
+# plot edist analysis
+p_ed <- ggplot(ped, aes(x = trajectories, y = ed,  fill = trajectories)) +
+  geom_col() +
+  # For some reason it works in this plot 
+  scale_y_continuous(limits = c(0, 50)) +
+  theme_classic() +
+  labs(title = "computed similarity: Edist") +
+  theme(legend.position = "none")
 
-
-
-
+# plot it in one row
+cowplot::plot_grid(p_dtw, p_ed, nrow = 1, ncol = 2)
 ```
 
 
