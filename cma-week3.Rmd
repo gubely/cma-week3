@@ -1,0 +1,89 @@
+---
+title: "cma-week3"
+author: "Yves Gubelmann"
+date: "7 5 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(readr)        # to import tabular data (e.g. csv)
+library(dplyr)        # to manipulate (tabular) data
+library(ggplot2)      # to visualize data
+library(sf)           # to handle spatial vector data
+library(terra)        # To handle raster data
+library(lubridate)    # To handle dates and times
+library(zoo)          # To smoothen data
+library(cowplot)
+
+```
+
+
+```{r task 1, highlight=TRUE, message = FALSE}
+# Task 1
+caro <- read_delim("00_Rawdata/caro60.csv",",") # adjust path
+caro <- st_as_sf(caro, coords = c("E", "N"), crs = 2056, remove = FALSE)
+
+caro <- caro %>%                           # Take caro (grouping not needed)
+  mutate(timelag = as.integer(difftime(lead(DatetimeUTC),DatetimeUTC, units = "secs"))) %>% 
+  mutate(steplength = sqrt(((E-lead(E,1))^2+(N-lead(N,1))^2))) %>%
+  # Step a:  calculate the following Euclidean distance
+  mutate(speed = steplength/timelag) %>% 
+  # Step b: Measure the distance from every point to every other point within this temporal window
+  mutate( 
+    nMinus2 = sqrt((lag(E,2)-E)^2+(lag(N,2)-N)^2),   # distance to pos -30 minutes
+    nMinus1 = sqrt((lag(E,1)-E)^2+(lag(N,1)-N)^2),   # distance to pos -15 minutes
+    nPlus1  = sqrt((E-lead(E,1))^2+(N-lead(N,1))^2), # distance to pos +15 mintues
+    nPlus2  = sqrt((E-lead(E,2))^2+(N-lead(N,2))^2)  # distance to pos +30 minutes
+  ) %>% 
+  rowwise() %>%
+  mutate(
+    stepMean = mean(c(nMinus2, nMinus1,nPlus1,nPlus2))
+  ) %>%
+  ungroup() 
+
+# Step c: Remove static points
+caro <- caro %>% 
+  ungroup() %>%
+  mutate(static = stepMean < mean(stepMean, na.rm = TRUE))
+
+caro_filter <- caro %>%
+  filter(!static)
+
+caro_filter%>%
+  ggplot(aes(E, N))  +
+  geom_path() +
+  geom_point() +
+  coord_fixed() +
+  theme(legend.position = "bottom")
+
+
+
+caro_3 <- caro %>% 
+  slice(seq(1, nrow(caro), by = 3)) %>% 
+  mutate(timelag = as.integer(difftime(lead(DatetimeUTC),DatetimeUTC, units = "secs"))) %>% 
+  mutate(steplength = sqrt(((E-lead(E,1))^2+(N-lead(N,1))^2))) %>% 
+  mutate(speed = steplength/timelag)
+
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
