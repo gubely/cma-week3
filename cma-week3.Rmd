@@ -17,6 +17,12 @@ library(lubridate)    # To handle dates and times
 library(zoo)          # To smoothen data
 library(cowplot)
 
+# define functions
+rle_id <- function(vec){
+  x <- rle(vec)$lengths
+  as.factor(rep(seq_along(x), times=x))
+  }
+
 ```
 
 
@@ -50,22 +56,39 @@ caro <- caro %>%
 
 caro_filter <- caro %>%
   filter(!static)
-
+# Task 3
 caro_filter %>%
   ggplot(data=caro, mapping=aes(E, N, colour = static))  +
   geom_path() +
   geom_point() +
   coord_fixed() +
   theme(legend.position = "bottom")
+```
 
 
+```{r task 4, highlight=TRUE, message = FALSE}
+# Task 4: Segment-based analysis
+caro <- caro %>%
+  mutate(segment_id = rle_id(static))
 
-caro_3 <- caro %>% 
-  slice(seq(1, nrow(caro), by = 3)) %>% 
-  mutate(timelag = as.integer(difftime(lead(DatetimeUTC),DatetimeUTC, units = "secs"))) %>% 
-  mutate(steplength = sqrt(((E-lead(E,1))^2+(N-lead(N,1))^2))) %>% 
-  mutate(speed = steplength/timelag)
+# generate a plot with uncleanded data
+caro_filter %>%
+  ggplot(data=caro, mapping=aes(E, N, colour = segment_id))  +
+  geom_path() +
+  geom_point() +
+  coord_fixed() +
+  labs(title = "Moving segements coloured by segment ID") + 
+  theme_classic()
 
+# filter on duration
+# caro_5min <- caro %>% 
+#   group_by(segment_id)
+```
+
+```{r task 5, highlight=TRUE, message = FALSE}
+# Task 5
+ped <- read_delim("00_Rawdata/pedestrian.csv",",") # adjust path
+ped <- st_as_sf(ped, coords = c("E", "N"), crs = 2056, remove = FALSE)
 ```
 
 ## R Markdown
