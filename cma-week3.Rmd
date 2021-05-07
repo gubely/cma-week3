@@ -39,15 +39,17 @@ caro <- caro %>%                           # Take caro (grouping not needed)
   # Step a:  calculate the following Euclidean distance
   mutate(speed = steplength/timelag) %>% 
   # Step b: Measure the distance from every point to every other point within this temporal window
-  mutate( 
-    nMinus2 = sqrt((lag(E,30)-E)^2+(lag(N,30)-N)^2),   # distance to pos -30 minutes
-    nMinus1 = sqrt((lag(E,15)-E)^2+(lag(N,15)-N)^2),   # distance to pos -15 minutes
-    nPlus1  = sqrt((E-lead(E,15))^2+(N-lead(N,15))^2), # distance to pos +15 mintues
-    nPlus2  = sqrt((E-lead(E,30))^2+(N-lead(N,30))^2)  # distance to pos +30 minutes
+  mutate(
+    nMinus3 = sqrt((lag(E, 3) - E)^2 + (lag(N, 3) - N)^2),
+    nMinus2 = sqrt((lag(E, 2) - E)^2 + (lag(N, 2) - N)^2),
+    nMinus1 = sqrt((lag(E, 1) - E)^2 + (lag(N, 1) - N)^2),
+    nPlus1 = sqrt((E - lead(E, 1))^2 + (N - lead(N, 1))^2),
+    nPlus2 = sqrt((E - lead(E, 2))^2 + (N - lead(N, 2))^2),
+    nPlus3 = sqrt((E - lead(E, 3))^2 + (N - lead(N, 3))^2)
   ) %>% 
   rowwise() %>%
   mutate(
-    stepMean = mean(c(nMinus2, nMinus1,nPlus1,nPlus2))
+    stepMean = mean(c(nMinus3, nMinus2, nMinus1,nPlus1,nPlus2, nPlus3))
   ) %>%
   ungroup() 
 # Task 2
